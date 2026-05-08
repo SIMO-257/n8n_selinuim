@@ -1,7 +1,10 @@
 {
-
   "build": {
     "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "gunicorn code:app --bind 0.0.0.0:$PORT --timeout 300",
+    "healthcheckPath": "/health"
   },
   "$schema": "https://railway.app/railway.schema.json"
 }
