@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os  # Already there
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -77,10 +78,10 @@ class AdvancedSeleniumScanner:
         }
         
     def setup_driver(self):
-        """Configure Selenium for Railway environment"""
+        """Configure Selenium for Docker/Railway environment"""
         options = Options()
         
-        # Critical for Railway
+        # Critical for headless containers
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
@@ -88,36 +89,22 @@ class AdvancedSeleniumScanner:
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        
-        # Additional flags for stability in container
         options.add_argument("--disable-setuid-sandbox")
         options.add_argument("--disable-software-rasterizer")
         options.add_argument("--disable-logging")
         options.add_argument("--log-level=3")
-        options.add_argument("--silent")
         
-        # Railway-specific Chrome binary path
-        chrome_paths = [
-            "/usr/bin/chromium",
-            "/usr/bin/chromium-browser",
-            "/usr/bin/google-chrome",
-            "/usr/bin/google-chrome-stable"
-        ]
+        # Force Chromium binary location for Docker
+        options.binary_location = "/usr/bin/chromium"
         
-        for path in chrome_paths:
-            if os.path.exists(path):
-                options.binary_location = path
-                print(f"[+] Using Chrome binary: {path}")
-                break
+        # Disable DevTools error logs
+        options.add_experimental_option("excludeSwitches", ["enable-logging"])
         
-        # Set up logging
-        options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
-        
-        # Create driver with service to suppress logs
-        service = Service(log_path=os.devnull)
+        # Create driver with suppressed logs
+        service = Service(log_output=open(os.devnull, 'w'))
         self.driver = webdriver.Chrome(options=options, service=service)
         self.wait = WebDriverWait(self.driver, 10)
-        
+            
     def scan(self):
         """Main scanning orchestration"""
         print(f"[+] Starting comprehensive Selenium scan on: {self.target_url}")
