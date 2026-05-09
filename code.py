@@ -79,6 +79,9 @@ class AdvancedSeleniumScanner:
         
     def setup_driver(self):
         """Configure Selenium for Docker/Railway environment"""
+        from webdriver_manager.chrome import ChromeDriverManager
+        from selenium.webdriver.chrome.service import Service
+        
         options = Options()
         
         # Critical for headless containers
@@ -94,17 +97,17 @@ class AdvancedSeleniumScanner:
         options.add_argument("--disable-logging")
         options.add_argument("--log-level=3")
         
-        # Force Chromium binary location for Docker
+        # Set Chromium binary location
         options.binary_location = "/usr/bin/chromium"
         
         # Disable DevTools error logs
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
         
-        # Create driver with suppressed logs
-        service = Service(log_output=open(os.devnull, 'w'))
-        self.driver = webdriver.Chrome(options=options, service=service)
+        # Use webdriver-manager to automatically download ChromeDriver
+        service = Service(ChromeDriverManager().install())
+        
+        self.driver = webdriver.Chrome(service=service, options=options)
         self.wait = WebDriverWait(self.driver, 10)
-            
     def scan(self):
         """Main scanning orchestration"""
         print(f"[+] Starting comprehensive Selenium scan on: {self.target_url}")
