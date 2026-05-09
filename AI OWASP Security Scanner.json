@@ -1,0 +1,390 @@
+{
+  "name": "AI OWASP Security Scanner",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scan-security",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "cfd40e85-625c-4695-b544-68c0e24ac868",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "e95c3ed2-b6a1-44e2-9e57-a9253e2ad386"
+    },
+    {
+      "parameters": {
+        "functionCode": "const url = $json.body.url;\n\nif (!url || !url.startsWith(\"http\")) {\n  throw new Error(\"Invalid URL\");\n}\n\nconst allowed = [\"example.com\", \"localhost\"];\n\nif (!allowed.some(d => url.includes(d))) {\n  throw new Error(\"Unauthorized domain\");\n}\n\nreturn [{ url }];"
+      },
+      "id": "616e9246-3efd-448c-9f86-719956251ec4",
+      "name": "Validate URL",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://unbaked-unfitted-ecologist.ngrok-free.dev/scan",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"url\": \"{{ $json.url }}\"\n} ",
+        "headerParametersJson": "{\n  \"ngrok-skip-browser-warning\": \"true\"\n}"
+      },
+      "id": "0318ac44-86aa-4fe8-a655-451d81c006b1",
+      "name": "Call Scanner API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "functionCode": "const issues = $json.issues || [];\nreturn [{ issues, prompt: `Explain these security issues and give fixes:\\n${issues.join(\"\\n\")}` }];"
+      },
+      "id": "972c1295-d554-434c-a415-2c732a37ffd4",
+      "name": "Prepare Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        608,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        848,
+        0
+      ],
+      "id": "9a2b8e08-b84e-4f4d-8e17-0706a85c5a0d",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "48spPQ4r95wvyfkP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "7mohammed.mammah@gmail.com",
+        "subject": "Your website security report:",
+        "message": "={{ $json.content.parts[0].text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "1ad39086-0764-424d-8f67-9461bce5cdd0",
+      "name": "Send a message",
+      "webhookId": "d2c0ec73-05cc-49c3-953a-ff7fb18d1a08",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "plvrakHDw7h25KO1",
+          "name": "Gmail OAuth2 API"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "functionCode": "const rawAnalysis = $json.content.parts[0].text || '';\n\n// Replace literal \\n with actual newlines\nconst formattedAnalysis = rawAnalysis.replace(/\\\\n/g, '\\n');\nreturn [{\n  report: {\n    url: $input.first().json.url,\n    issues: $input.first().json.issues,\n    ai_analysis: formattedAnalysis\n  }\n}];"
+      },
+      "id": "f2df45af-83b8-4b84-9dae-fa241a25c13c",
+      "name": "Build Final JSON",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "7mohammed.mammah@gmail.com",
+        "subject": "OWASP Security Scan Report",
+        "message": "={{ $json.report.ai_analysis }}",
+        "options": {}
+      },
+      "id": "bcb52604-2e73-4d28-9fca-7a3c252ae729",
+      "name": "Send Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2128,
+        528
+      ],
+      "webhookId": "593a6d59-b729-4093-979f-228217af7838",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "plvrakHDw7h25KO1",
+          "name": "Gmail OAuth2 API"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "scan-security",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "8c3fc601-5247-48a0-927b-be83e4d9e252",
+      "name": "Webhook1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        576,
+        512
+      ],
+      "webhookId": "security-scan-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "const url = $json.body.url;\n\nif (!url || !url.startsWith('http')) {\n  throw new Error('Invalid URL');\n}\n\nreturn [{ url }];"
+      },
+      "id": "c502d5d4-4936-4a79-b823-347fbb44fe85",
+      "name": "Validate URL1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        848,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const issues = $json.issues || [];\n\n// Try multiple ways to get the URL\nconst url = $('Validate URL1').first().json.url;\n\nconst formattedIssues = issues.length\n  ? issues.map((i, idx) => `${idx + 1}. ${i}`).join('\\n')\n  : 'No vulnerabilities detected';\n\nconst prompt = `You are a senior cybersecurity consultant specialized in OWASP Top 10.\n\nCreate a PROFESSIONAL SECURITY AUDIT REPORT in the following format:\n\n# 🔒 SECURITY AUDIT REPORT\n## Target: ${url}\n## Scan Date: ${new Date().toLocaleString()}\n\n---\n\n## 📊 EXECUTIVE SUMMARY\n[Write a brief 2-3 sentence summary of findings]\n\n---\n\n## 🔍 DETAILED FINDINGS\n\nFor each vulnerability detected below, provide:\n1. **Issue Description** (clear explanation)\n2. **OWASP Category** (with link if possible)\n3. **Remediation Steps** (numbered, actionable)\n4. **Severity Level** (Critical/High/Medium/Low with emoji)\n\n---\n\nDetected Issues:\n${formattedIssues}\n\n---\n\n## ✅ RECOMMENDATIONS\n[Priority order fixes]\n\n## 📝 NOTES\n[Any additional context]\n\nUse markdown formatting with emojis, headers, and bullet points for a professional look.`;\n\nreturn [{\n  url: url,\n  issues: issues,\n  prompt: prompt,\n  status: $json.status || 'completed'\n}];"
+      },
+      "id": "d33b31c9-6382-4b53-a699-d77d156a88f1",
+      "name": "Prepare Prompt1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "8f7fe1eb-f3cd-46dc-9265-9880c140f985",
+      "name": "Message a model1",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        512
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "48spPQ4r95wvyfkP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "https://unbaked-unfitted-ecologist.ngrok-free.dev/scan",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"url\": \"{{ $json.url }}\"\n} ",
+        "headerParametersJson": "{\n  \"ngrok-skip-browser-warning\": \"true\"\n}"
+      },
+      "id": "7f12c4be-d35b-45b6-8778-0feea038e391",
+      "name": "Call Scanner API1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        512
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate URL": {
+      "main": [
+        [
+          {
+            "node": "Call Scanner API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Scanner API": {
+      "main": [
+        [
+          {
+            "node": "Prepare Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Prompt": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Final JSON": {
+      "main": [
+        [
+          {
+            "node": "Send Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Validate URL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate URL1": {
+      "main": [
+        [
+          {
+            "node": "Call Scanner API1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Prompt1": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Build Final JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Scanner API1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Prompt1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f3dd0551-e576-494b-883c-6f09a92ca661",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "878b658ad941540aaab1eae602ea86fc4c39b02bfa713ef96a9a5eebbac9add5"
+  },
+  "id": "GjxfvhexaOmwzwI7",
+  "tags": []
+}
