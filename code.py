@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, JavascriptException
+from selenium.webdriver.chrome.service import Service
 import requests
 import time
 import re
@@ -78,36 +79,22 @@ class AdvancedSeleniumScanner:
         }
         
     def setup_driver(self):
-        """Configure Selenium for Docker/Railway environment"""
-        from webdriver_manager.chrome import ChromeDriverManager
-        from selenium.webdriver.chrome.service import Service
-        
         options = Options()
-        
-        # Critical for headless containers
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        options.add_argument("--disable-setuid-sandbox")
-        options.add_argument("--disable-software-rasterizer")
-        options.add_argument("--disable-logging")
-        options.add_argument("--log-level=3")
         
-        # Set Chromium binary location
+        # Point to installed Chromium
         options.binary_location = "/usr/bin/chromium"
         
-        # Disable DevTools error logs
-        options.add_experimental_option("excludeSwitches", ["enable-logging"])
-        
-        # Use webdriver-manager to automatically download ChromeDriver
-        service = Service(ChromeDriverManager().install())
+        # Use system ChromeDriver (already installed)
+        service = Service(executable_path="/usr/bin/chromedriver")
         
         self.driver = webdriver.Chrome(service=service, options=options)
         self.wait = WebDriverWait(self.driver, 10)
+
     def scan(self):
         """Main scanning orchestration"""
         print(f"[+] Starting comprehensive Selenium scan on: {self.target_url}")
