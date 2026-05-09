@@ -77,22 +77,27 @@ class AdvancedSeleniumScanner:
             'Bearer Token': r'Bearer[\s]+[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+\.[A-Za-z0-9\-_=]+',
             'Internal IP': r'(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})'
         }
-        
+
     def setup_driver(self):
+        """Connect to Selenium Standalone Chrome service"""
+        import os
+        
         options = Options()
+        
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
         
-        # Point to installed Chromium
-        options.binary_location = "/usr/bin/chromium"
+        # Use the Selenium service URL from Railway
+        selenium_url = os.environ.get("SELENIUM_URL", "http://localhost:4444/wd/hub")
         
-        # Use system ChromeDriver (already installed)
-        service = Service(executable_path="/usr/bin/chromedriver")
-        
-        self.driver = webdriver.Chrome(service=service, options=options)
+        # Connect remotely (no local Chrome/ChromeDriver needed!)
+        self.driver = webdriver.Remote(
+            command_executor=selenium_url,
+            options=options
+        )
         self.wait = WebDriverWait(self.driver, 10)
 
     def scan(self):
